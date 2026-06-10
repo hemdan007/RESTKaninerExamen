@@ -63,7 +63,7 @@ namespace RestKaniner.Models
             // Filter
             if (!string.IsNullOrEmpty(farve))
             {
-                result = result.Where(k => k.Farve == farve);
+                result = result.Where(k => k.Farve.ToLower() == farve.ToLower());
             }
 
             // Sort
