@@ -1,0 +1,71 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+
+namespace RestKaniner.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AuthController : ControllerBase
+    {
+        private readonly IConfiguration _config;
+
+        public AuthController(IConfiguration config)
+        {
+            _config = config;
+        }
+
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] LoginRequest login)
+        {
+            // 1. Validate the user (In a real scenario, check your database here)
+            // Here we use a simple hardcoded check:
+            if (login.Username == "admin" && login.Password == "1234")
+            {
+                //law el data tmam yb2a n3ml token
+                var token = GenerateJwtToken(login.Username);
+                return Ok(new { token });
+            }
+
+            //law el data msh sa7 hirg3 401 Unauthorized
+            return Unauthorized("Invalid username or password");
+        }
+
+        private string GenerateJwtToken(string username)
+        {
+            var jwtSettings = _config.GetSection("Jwt");
+
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSettings["Key"]!)
+            );
+
+            var creds = new SigningCredentials(
+                key,
+                SecurityAlgorithms.HmacSha256
+            );
+
+            var claims = new[] // Claims are the pieces of information "baked" into the token
+            {
+                new Claim(ClaimTypes.Name, username)
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: jwtSettings["Issuer"],
+                audience: jwtSettings["Audience"],
+                claims: claims,
+                expires: DateTime.Now.AddHours(2), // Token is valid for 2 hours
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+    }
+
+    public class LoginRequest
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}
